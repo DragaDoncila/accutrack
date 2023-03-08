@@ -11,31 +11,41 @@ def get_gt_graph(data_dir, seq):
     coords, coord_cols, edges = get_graph_from_ims(track_ims, track_df)
     return track_ims, coords, coord_cols, edges
 
+
 def get_comp_graph(data_dir, seq):
     track_ims, track_df = load_track_info(data_dir, seq)
     coords, coord_cols, edges = get_graph_from_ims(track_ims, track_df)
     return track_ims, coords, coord_cols, edges
 
-def make_network_x_graph(coords: 'pd.DataFrame', edges: 'List[Tuple[int, int, int]]'):
+
+def make_network_x_graph(coords: "pd.DataFrame", edges: "List[Tuple[int, int, int]]"):
     g = nx.DiGraph()
-    kwarg_dict = coords.to_dict(orient='index')
+    kwarg_dict = coords.to_dict(orient="index")
     g.add_nodes_from(kwarg_dict.items())
-    edge_tuples = [(e[0], e[1], {'is_parent': e[2]}) for e in edges]
+    edge_tuples = [(e[0], e[1], {"is_parent": e[2]}) for e in edges]
     g.add_edges_from(edge_tuples)
     return g
 
+
 def get_node_position(node_attrs):
-    if 'z' in node_attrs:
-        return (node_attrs['t'], node_attrs['z'], node_attrs['y'], node_attrs['x'])
-    return (node_attrs['t'], node_attrs['y'], node_attrs['x'])
+    if "z" in node_attrs:
+        return (node_attrs["t"], node_attrs["z"], node_attrs["y"], node_attrs["x"])
+    return (node_attrs["t"], node_attrs["y"], node_attrs["x"])
 
 
-def get_frame_det_test_matrix(gt_graph: 'networkx.Graph', gt_frame: 'np.ndarray', gt_nodes: 'List[int]', comp_graph: 'networkx.Graph', comp_frame: 'np.ndarray', comp_nodes: 'List[int]'):
+def get_frame_det_test_matrix(
+    gt_graph: "networkx.Graph",
+    gt_frame: "np.ndarray",
+    gt_nodes: "List[int]",
+    comp_graph: "networkx.Graph",
+    comp_frame: "np.ndarray",
+    comp_nodes: "List[int]",
+):
     """Return detection matrix for all reference markers in the given frame.
 
     For each reference marker, iterate through computed markers until one is
     found that passes the detection test. If a matching computed marker is
-    found, break early. 
+    found, break early.
 
     Parameters
     ----------
@@ -43,7 +53,7 @@ def get_frame_det_test_matrix(gt_graph: 'networkx.Graph', gt_frame: 'np.ndarray'
         Graph of ground truth tracking solution. Nodes must have label
         attribute denoting the pixel value of the marker.
     gt_frame : np.ndarray
-        Ground truth image frame for which the detection test is 
+        Ground truth image frame for which the detection test is
         being performed.
     gt_nodes : List[int]
         A list of the ground truth node IDs in the current frame.
@@ -51,7 +61,7 @@ def get_frame_det_test_matrix(gt_graph: 'networkx.Graph', gt_frame: 'np.ndarray'
         Graph of computed tracking solution. Nodes must have label
         attribute denoting the pixel value of the marker.
     comp_frame : np.ndarray
-        Computed image frame for which the detection test is 
+        Computed image frame for which the detection test is
         being performed.
     comp_nodes : List[int]
         A list of the computed node IDs in the current frame.
@@ -65,21 +75,22 @@ def get_frame_det_test_matrix(gt_graph: 'networkx.Graph', gt_frame: 'np.ndarray'
     det_test_matrix = np.zeros((len(comp_nodes), len(gt_nodes)), dtype=np.uint8)
     for j, gt_node_id in enumerate(gt_nodes):
         gt_attrs = gt_graph.nodes[gt_node_id]
-        gt_label = gt_attrs['label']
+        gt_label = gt_attrs["label"]
         gt_blob_mask = gt_frame == gt_label
         for i, comp_node_id in enumerate(comp_nodes):
             comp_attrs = comp_graph.nodes[comp_node_id]
-            comp_label = comp_attrs['label']
+            comp_label = comp_attrs["label"]
             comp_blob_mask = comp_frame == comp_label
             is_match = int(detection_test(gt_blob_mask, comp_blob_mask))
             det_test_matrix[i, j] = is_match
-            # once we've found a match for a gt marker, we can exit early 
+            # once we've found a match for a gt marker, we can exit early
             if is_match:
                 break
 
     return det_test_matrix
 
-def detection_test(gt_blob: 'np.ndarray', comp_blob: 'np.ndarray') -> bool:
+
+def detection_test(gt_blob: "np.ndarray", comp_blob: "np.ndarray") -> bool:
     """Check if computed marker overlaps majority of the reference marker.
 
     Given a reference marker and computer marker in original coordinates,
@@ -105,7 +116,13 @@ def detection_test(gt_blob: 'np.ndarray', comp_blob: 'np.ndarray') -> bool:
     comp_blob_matches_gt_blob = int(np.sum(intersection) > 0.5 * n_gt_pixels)
     return comp_blob_matches_gt_blob
 
-def get_detection_matrices(gt_graph: 'nx.Graph', gt_ims: 'np.ndarray', comp_graph: 'nx.Graph', comp_ims: 'np.ndarray'):
+
+def get_detection_matrices(
+    gt_graph: "nx.Graph",
+    gt_ims: "np.ndarray",
+    comp_graph: "nx.Graph",
+    comp_ims: "np.ndarray",
+):
     """Get detection matrices for every frame in the dataset
 
     Parameters
@@ -130,20 +147,29 @@ def get_detection_matrices(gt_graph: 'nx.Graph', gt_ims: 'np.ndarray', comp_grap
     """
     # the node IDs are contiguous, so we're going to rely on this for our matrix setup
     det_matrices = {}
-    for t in tqdm(range(len(comp_ims)), 'Detection tests'):
-        comp_nodes = [node_id for node_id in comp_graph.nodes if comp_graph.nodes[node_id]['t'] == t]
-        gt_nodes = [node_id for node_id in gt_graph.nodes if gt_graph.nodes[node_id]['t'] == t]
+    for t in tqdm(range(len(comp_ims)), "Detection tests"):
+        comp_nodes = [
+            node_id
+            for node_id in comp_graph.nodes
+            if comp_graph.nodes[node_id]["t"] == t
+        ]
+        gt_nodes = [
+            node_id for node_id in gt_graph.nodes if gt_graph.nodes[node_id]["t"] == t
+        ]
         comp_frame = comp_ims[t]
         gt_frame = gt_ims[t]
-        det_test_matrix = get_frame_det_test_matrix(gt_graph, gt_frame, gt_nodes, comp_graph, comp_frame, comp_nodes)
+        det_test_matrix = get_frame_det_test_matrix(
+            gt_graph, gt_frame, gt_nodes, comp_graph, comp_frame, comp_nodes
+        )
         det_matrices[t] = {
-            'det': det_test_matrix,
-            'comp_ids': comp_nodes,
-            'gt_ids': gt_nodes
+            "det": det_test_matrix,
+            "comp_ids": comp_nodes,
+            "gt_ids": gt_nodes,
         }
     return det_matrices
 
-def get_node_matching_map(detection_matrices: 'Dict'):
+
+def get_node_matching_map(detection_matrices: "Dict"):
     """Return list of tuples of (gt_id, comp_id) for all matched nodes
 
     Parameters
@@ -153,9 +179,9 @@ def get_node_matching_map(detection_matrices: 'Dict'):
     """
     matched_nodes = []
     for m_dict in detection_matrices.values():
-        matrix = m_dict['det']
-        comp_nodes = np.asarray(m_dict['comp_ids'])
-        gt_nodes = np.asarray(m_dict['gt_ids'])
+        matrix = m_dict["det"]
+        comp_nodes = np.asarray(m_dict["comp_ids"])
+        gt_nodes = np.asarray(m_dict["gt_ids"])
         row_idx, col_idx = np.nonzero(matrix)
         comp_node_ids = comp_nodes[row_idx]
         gt_node_ids = gt_nodes[col_idx]
@@ -163,10 +189,78 @@ def get_node_matching_map(detection_matrices: 'Dict'):
     return matched_nodes
 
 
-if __name__ == '__main__':
-    comp_ims, comp_coords, comp_coord_cols, comp_edges = get_comp_graph('/home/draga/PhD/data/cell_tracking_challenge/Fluo-N2DL-HeLa/', '01')
+def get_vertex_errors(
+    gt_graph: "networkx.Graph",
+    comp_graph: "networkx.Graph",
+    matched_nodes: "List[Tuple[int, int]]",
+    detection_matrices: "Dict",
+):
+    """Count vertex errors and assign class to each comp node.
+
+    Parameters
+    ----------
+    gt_graph : networkx.Graph
+        Graph of ground truth tracking solution. Nodes must have label
+        attribute denoting the pixel value of the marker.
+    comp_graph : networkx.Graph
+        Graph of computed tracking solution. Nodes must have label
+        attribute denoting the pixel value of the marker.
+    matched_nodes : List[Tuple[int, int]]
+        List of tuples of matched node IDs between gt and comp
+    detection_matrices : Dict
+        Dictionary indexed by t holding `det`, `comp_ids` and `gt_ids`
+    """
+    tp_count = 0
+    fp_count = 0
+    fn_count = 0
+    ns_count = 0
+
+    nx.set_node_attributes(comp_graph, False, "is_tp")
+    nx.set_node_attributes(comp_graph, False, "is_fp")
+    nx.set_edge_attributes(comp_graph, False, "is_ns")
+    nx.set_edge_attributes(gt_graph, False, "is_fn")
+
+    for t in sorted(detection_matrices.keys()):
+        mtrix = detection_matrices[t]["det"]
+        comp_ids = detection_matrices[t]["comp_ids"]
+
+        tp_rows = np.argwhere(np.sum(mtrix, axis=1) == 1)
+        fp_rows = np.argwhere(np.sum(mtrix, axis=1) == 0)
+        fn_cols = np.argwhere(np.sum(mtrix, axis=0) == 0)
+        ns_rows = np.argwhere(np.sum(mtrix, axis=1) > 1)
+
+        for row in tp_rows:
+            node_id = comp_ids[row]
+            comp_graph.nodes[node_id]["is_tp"] = True
+
+        for row in fp_rows:
+            node_id = comp_ids[row]
+            comp_graph.nodes[node_id]["is_fp"] = True
+
+        for col in fn_cols:
+            node_id = comp_ids[col]
+            gt_graph.nodes[node_id]["is_fn"] = True
+
+        for row in ns_rows:
+            node_id = comp_ids[row]
+            comp_graph.nodes[node_id]["is_ns"] = True
+            number_of_splits = np.sum(mtrix[row]) - 1
+            ns_count += number_of_splits
+
+        tp_count += len(tp_rows)
+        fp_count += len(fp_rows)
+        fn_count += len(fn_cols)
+
+
+if __name__ == "__main__":
+    comp_ims, comp_coords, comp_coord_cols, comp_edges = get_comp_graph(
+        "/home/draga/PhD/data/cell_tracking_challenge/Fluo-N2DL-HeLa/", "01"
+    )
     comp_g = make_network_x_graph(comp_coords, comp_edges)
-    gt_ims, coords, coord_cols, edges = get_gt_graph('/home/draga/PhD/data/cell_tracking_challenge/Fluo-N2DL-HeLa/', '01')
+    gt_ims, coords, coord_cols, edges = get_gt_graph(
+        "/home/draga/PhD/data/cell_tracking_challenge/Fluo-N2DL-HeLa/", "01"
+    )
     gt_g = make_network_x_graph(coords, edges)
     det_matrices = get_detection_matrices(gt_g, gt_ims, comp_g, comp_ims)
-    print("Done")
+    mapping = get_node_matching_map(det_matrices)
+    print("Done!")
