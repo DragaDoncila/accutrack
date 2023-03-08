@@ -192,7 +192,6 @@ def get_node_matching_map(detection_matrices: "Dict"):
 def get_vertex_errors(
     gt_graph: "networkx.Graph",
     comp_graph: "networkx.Graph",
-    matched_nodes: "List[Tuple[int, int]]",
     detection_matrices: "Dict",
 ):
     """Count vertex errors and assign class to each comp node.
@@ -205,8 +204,6 @@ def get_vertex_errors(
     comp_graph : networkx.Graph
         Graph of computed tracking solution. Nodes must have label
         attribute denoting the pixel value of the marker.
-    matched_nodes : List[Tuple[int, int]]
-        List of tuples of matched node IDs between gt and comp
     detection_matrices : Dict
         Dictionary indexed by t holding `det`, `comp_ids` and `gt_ids`
     """

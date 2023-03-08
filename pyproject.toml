@@ -1,6 +1,33 @@
+[project]
+name = "accutrack"
+dynamic = ["version"]
+description = "Implementation of AOGM cell tracking accuracy measure"
+readme = "README.md"
+requires-python = '>=3.8'
+license = { text = "BSD 3-Clause License" }
+authors = [{ name = "Draga Doncila Pop", email = "ddoncila@gmail.com" }]
+dependencies = [
+    "numpy",
+    "tifffile",
+    "networkx",
+    "tqdm",
+    "pandas",
+    "scikit-image",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pre-commit",
+    "black"
+]
+
 [build-system]
 requires = ["setuptools", "wheel", "setuptools_scm"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools_scm]
 write_to = "src/accutrack/_version.py"
