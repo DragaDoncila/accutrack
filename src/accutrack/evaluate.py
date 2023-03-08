@@ -125,19 +125,42 @@ def get_detection_matrices(gt_graph: 'nx.Graph', gt_ims: 'np.ndarray', comp_grap
 
     Returns
     -------
-    List[np.ndarray]
-        Ordered list where each element is the detection matrix for frame i.
+    Dict
+        Dictionary indexed by t holding `det`, `comp_ids` and `gt_ids`
     """
     # the node IDs are contiguous, so we're going to rely on this for our matrix setup
-    det_matrices = []
+    det_matrices = {}
     for t in tqdm(range(len(comp_ims)), 'Detection tests'):
         comp_nodes = [node_id for node_id in comp_graph.nodes if comp_graph.nodes[node_id]['t'] == t]
         gt_nodes = [node_id for node_id in gt_graph.nodes if gt_graph.nodes[node_id]['t'] == t]
         comp_frame = comp_ims[t]
         gt_frame = gt_ims[t]
         det_test_matrix = get_frame_det_test_matrix(gt_graph, gt_frame, gt_nodes, comp_graph, comp_frame, comp_nodes)
-        det_matrices.append(det_test_matrix)
+        det_matrices[t] = {
+            'det': det_test_matrix,
+            'comp_ids': comp_nodes,
+            'gt_ids': gt_nodes
+        }
     return det_matrices
+
+def get_node_matching_map(detection_matrices: 'Dict'):
+    """Return list of tuples of (gt_id, comp_id) for all matched nodes
+
+    Parameters
+    ----------
+    detection_matrices : Dict
+        Dictionary indexed by t holding `det`, `comp_ids` and `gt_ids`
+    """
+    matched_nodes = []
+    for m_dict in detection_matrices.values():
+        matrix = m_dict['det']
+        comp_nodes = np.asarray(m_dict['comp_ids'])
+        gt_nodes = np.asarray(m_dict['gt_ids'])
+        row_idx, col_idx = np.nonzero(matrix)
+        comp_node_ids = comp_nodes[row_idx]
+        gt_node_ids = gt_nodes[col_idx]
+        matched_nodes.extend(list(zip(gt_node_ids, comp_node_ids)))
+    return matched_nodes
 
 
 if __name__ == '__main__':
