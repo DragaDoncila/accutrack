@@ -129,14 +129,14 @@ def get_detection_matrices(gt_graph: 'nx.Graph', gt_ims: 'np.ndarray', comp_grap
         Ordered list where each element is the detection matrix for frame i.
     """
     # the node IDs are contiguous, so we're going to rely on this for our matrix setup
-    det_matrices = {}
+    det_matrices = []
     for t in tqdm(range(len(comp_ims)), 'Detection tests'):
         comp_nodes = [node_id for node_id in comp_graph.nodes if comp_graph.nodes[node_id]['t'] == t]
         gt_nodes = [node_id for node_id in gt_graph.nodes if gt_graph.nodes[node_id]['t'] == t]
         comp_frame = comp_ims[t]
         gt_frame = gt_ims[t]
         det_test_matrix = get_frame_det_test_matrix(gt_graph, gt_frame, gt_nodes, comp_graph, comp_frame, comp_nodes)
-        det_matrices[t] = det_test_matrix
+        det_matrices.append(det_test_matrix)
     return det_matrices
 
 
