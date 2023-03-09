@@ -220,11 +220,12 @@ def get_vertex_errors(
     for t in sorted(detection_matrices.keys()):
         mtrix = detection_matrices[t]["det"]
         comp_ids = detection_matrices[t]["comp_ids"]
+        gt_ids = detection_matrices[t]["gt_ids"]
 
-        tp_rows = np.argwhere(np.sum(mtrix, axis=1) == 1)
-        fp_rows = np.argwhere(np.sum(mtrix, axis=1) == 0)
-        fn_cols = np.argwhere(np.sum(mtrix, axis=0) == 0)
-        ns_rows = np.argwhere(np.sum(mtrix, axis=1) > 1)
+        tp_rows = np.ravel(np.argwhere(np.sum(mtrix, axis=1) == 1))
+        fp_rows = np.ravel(np.argwhere(np.sum(mtrix, axis=1) == 0))
+        fn_cols = np.ravel(np.argwhere(np.sum(mtrix, axis=0) == 0))
+        ns_rows = np.ravel(np.argwhere(np.sum(mtrix, axis=1) > 1))
 
         for row in tp_rows:
             node_id = comp_ids[row]
@@ -235,9 +236,11 @@ def get_vertex_errors(
             comp_graph.nodes[node_id]["is_fp"] = True
 
         for col in fn_cols:
-            node_id = comp_ids[col]
+            node_id = gt_ids[col]
             gt_graph.nodes[node_id]["is_fn"] = True
 
+        # num operations needed to fix a non split vertex is
+        # num reference markers matched to computed marker - 1
         for row in ns_rows:
             node_id = comp_ids[row]
             comp_graph.nodes[node_id]["is_ns"] = True
@@ -247,6 +250,9 @@ def get_vertex_errors(
         tp_count += len(tp_rows)
         fp_count += len(fp_rows)
         fn_count += len(fn_cols)
+
+    error_counts = {"tp": tp_count, "fp": fp_count, "fn": fn_count, "ns": ns_count}
+    return error_counts
 
 
 if __name__ == "__main__":
@@ -260,4 +266,6 @@ if __name__ == "__main__":
     gt_g = make_network_x_graph(coords, edges)
     det_matrices = get_detection_matrices(gt_g, gt_ims, comp_g, comp_ims)
     mapping = get_node_matching_map(det_matrices)
+    vertex_errors = get_vertex_errors(gt_g, comp_g, det_matrices)
+    print(vertex_errors)
     print("Done!")
