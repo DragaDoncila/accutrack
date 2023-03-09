@@ -1,6 +1,11 @@
 import numpy as np
 import networkx as nx
-from accutrack.evaluate import detection_test, get_node_matching_map, get_vertex_errors
+from accutrack.evaluate import (
+    detection_test,
+    get_comp_subgraph,
+    get_node_matching_map,
+    get_vertex_errors,
+)
 
 
 def test_detection_test_true():
@@ -107,9 +112,34 @@ def test_get_vertex_errors():
     assert vertex_errors["fn"] == 3
 
     assert gt_g.nodes[15]["is_fn"]
+    assert not gt_g.nodes[17]["is_fn"]
+
     assert comp_g.nodes[3]["is_ns"]
+    assert not comp_g.nodes[7]["is_ns"]
+
     assert comp_g.nodes[7]["is_tp"]
+    assert not comp_g.nodes[3]["is_tp"]
+
     assert comp_g.nodes[10]["is_fp"]
+    assert not comp_g.nodes[7]["is_fp"]
 
 
-# test_get_vertex_errors()
+def test_get_comp_subgraph():
+    comp_ids = [3, 7, 10]
+    comp_ids_2 = list(np.asarray(comp_ids) + 1)
+
+    comp_g = nx.DiGraph()
+    comp_g.add_nodes_from(comp_ids + comp_ids_2)
+    nx.set_node_attributes(comp_g, False, "is_tp")
+    comp_g.nodes[7]["is_tp"] = True
+    comp_g.nodes[8]["is_tp"] = True
+    comp_g.nodes[11]["is_tp"] = True
+    comp_g.add_edge(3, 4)
+    comp_g.add_edge(7, 11)
+
+    induced_graph = get_comp_subgraph(comp_g)
+    assert sorted(induced_graph.nodes) == [7, 8, 11]
+    assert list(induced_graph.edges) == [(7, 11)]
+
+
+# test_get_comp_subgraph()

@@ -176,6 +176,12 @@ def get_node_matching_map(detection_matrices: "Dict"):
     ----------
     detection_matrices : Dict
         Dictionary indexed by t holding `det`, `comp_ids` and `gt_ids`
+
+    Returns
+    -------
+    matched_nodes: List[Tuple[int, int]]
+        List of tuples (gt_node_id, comp_node_id) denoting matched nodes
+        between reference graph and computed graph
     """
     matched_nodes = []
     for m_dict in detection_matrices.values():
@@ -194,7 +200,7 @@ def get_vertex_errors(
     comp_graph: "networkx.Graph",
     detection_matrices: "Dict",
 ):
-    """Count vertex errors and assign class to each comp node.
+    """Count vertex errors and assign class to each comp/gt node.
 
     Parameters
     ----------
@@ -214,8 +220,8 @@ def get_vertex_errors(
 
     nx.set_node_attributes(comp_graph, False, "is_tp")
     nx.set_node_attributes(comp_graph, False, "is_fp")
-    nx.set_edge_attributes(comp_graph, False, "is_ns")
-    nx.set_edge_attributes(gt_graph, False, "is_fn")
+    nx.set_node_attributes(comp_graph, False, "is_ns")
+    nx.set_node_attributes(gt_graph, False, "is_fn")
 
     for t in sorted(detection_matrices.keys()):
         mtrix = detection_matrices[t]["det"]
@@ -253,6 +259,26 @@ def get_vertex_errors(
 
     error_counts = {"tp": tp_count, "fp": fp_count, "fn": fn_count, "ns": ns_count}
     return error_counts
+
+
+def get_comp_subgraph(comp_graph: "networkx.Graph") -> "networkx.Graph":
+    """Return computed graph subgraph of TP vertices and their incident edges.
+
+    Parameters
+    ----------
+    comp_graph : networkx.Graph
+        Graph of computed tracking solution. Nodes must have label
+        attribute denoting the pixel value of the marker.
+
+    Returns
+    -------
+    induced_graph : networkx.Graph
+        Subgraph of comp_graph with only TP vertices and their incident edges
+    """
+    # filter graph to only TP nodes & edges
+    tp_nodes = [node for node in comp_graph.nodes if comp_graph.nodes[node]["is_tp"]]
+    induced_graph = nx.Graph(comp_graph.subgraph(tp_nodes).copy())
+    return induced_graph
 
 
 if __name__ == "__main__":
