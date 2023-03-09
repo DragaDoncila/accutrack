@@ -280,7 +280,8 @@ def get_comp_subgraph(comp_graph: "networkx.Graph") -> "networkx.Graph":
     return induced_graph
 
 
-def assign_edge_errors(gt_graph, comp_graph, induced_graph, node_mapping):
+def assign_edge_errors(gt_graph, comp_graph, node_mapping):
+    induced_graph = get_comp_subgraph(comp_graph)
 
     nx.set_edge_attributes(comp_graph, False, "is_fp")
     nx.set_edge_attributes(comp_graph, False, "is_tp")
@@ -314,6 +315,29 @@ def assign_edge_errors(gt_graph, comp_graph, induced_graph, node_mapping):
             gt_graph.edges["is_fn"] = True
 
 
+def get_error_counts(gt_graph, comp_graph):
+    count_fp = 0
+    count_wrong_sem = 0
+    count_tp = 0
+
+    for edge in comp_graph.edges:
+        if comp_graph.edges[edge]["is_fp"]:
+            count_fp += 1
+        elif comp_graph.edges[edge]["is_wrong_semantic"]:
+            count_wrong_sem += 1
+        elif comp_graph.edges[edge]["is_tp"]:
+            count_tp += 1
+    count_fn = len([edge for edge in gt_graph.edges if gt_graph.edges[edge]["is_fn"]])
+
+    edge_errors = {
+        "tp": count_tp,
+        "fp": count_fp,
+        "fn": count_fn,
+        "ws": count_wrong_sem,
+    }
+    return edge_errors
+
+
 if __name__ == "__main__":
     comp_ims, comp_coords, comp_coord_cols, comp_edges = get_comp_graph(
         "/home/draga/PhD/data/cell_tracking_challenge/Fluo-N2DL-HeLa/", "01"
@@ -326,5 +350,6 @@ if __name__ == "__main__":
     det_matrices = get_detection_matrices(gt_g, gt_ims, comp_g, comp_ims)
     mapping = get_node_matching_map(det_matrices)
     vertex_errors = get_vertex_errors(gt_g, comp_g, det_matrices)
-    print(vertex_errors)
+    assign_edge_errors(gt_g, comp_g, mapping)
+    edge_errors = get_error_counts(gt_g, comp_g)
     print("Done!")
