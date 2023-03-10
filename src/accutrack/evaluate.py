@@ -425,11 +425,11 @@ def get_ctc_tra_error(gt_graph, vertex_error_counts, edge_error_counts):
 
 if __name__ == "__main__":
     comp_ims, comp_coords, comp_coord_cols, comp_edges = get_comp_graph(
-        "/home/draga/PhD/software/ctc_evaluation/testing_dataset/", "03"
+        "/home/draga/PhD/data/cell_tracking_challenge/Fluo-N2DL-HeLa/", "01"
     )
     comp_g = make_network_x_graph(comp_coords, comp_edges)
     gt_ims, coords, coord_cols, edges = get_gt_graph(
-        "/home/draga/PhD/software/ctc_evaluation/testing_dataset/", "03"
+        "/home/draga/PhD/data/cell_tracking_challenge/Fluo-N2DL-HeLa/", "01"
     )
     gt_g = make_network_x_graph(coords, edges)
     det_matrices = get_detection_matrices(gt_g, gt_ims, comp_g, comp_ims)
