@@ -308,6 +308,11 @@ def assign_edge_errors(gt_graph, comp_graph, node_mapping):
     # fn edges - edges in gt_graph that aren't in induced graph
     for edge in gt_graph.edges:
         source, target = edge[0], edge[1]
+        # this edge is adjacent to an edge we didn't detect, so it definitely is an fn
+        if gt_graph.nodes[source]["is_fn"] or gt_graph.nodes[target]["is_fn"]:
+            gt_graph.edges[edge]["is_fn"] = True
+            continue
+
         source_comp_id = list(filter(lambda mp: mp[0] == source, node_mapping))[0][1]
         target_comp_id = list(filter(lambda mp: mp[0] == target, node_mapping))[0][1]
         expected_comp_edge = (source_comp_id, target_comp_id)
@@ -398,6 +403,10 @@ def get_ctc_tra_error(gt_graph, vertex_error_counts, edge_error_counts):
     n_nodes = gt_graph.number_of_nodes()
     n_edges = gt_graph.number_of_edges()
     aogm_0 = n_nodes * vertex_weight_fn + n_edges * edge_weight_fn
+    if aogm_0 == 0:
+        raise RuntimeError(
+            f"AOGM0 is 0 - cannot compute TRA from GT graph with {n_nodes} nodes and {n_edges} edges with {vertex_weight_fn} vertex FN weight and {edge_weight_fn} edge FN weight"
+        )
 
     # AOGM is our weighted sum of all errors
     aogm = get_weighted_error_sum(
@@ -416,11 +425,11 @@ def get_ctc_tra_error(gt_graph, vertex_error_counts, edge_error_counts):
 
 if __name__ == "__main__":
     comp_ims, comp_coords, comp_coord_cols, comp_edges = get_comp_graph(
-        "/home/draga/PhD/data/cell_tracking_challenge/Fluo-N2DL-HeLa/", "01"
+        "/home/draga/PhD/software/ctc_evaluation/testing_dataset/", "03"
     )
     comp_g = make_network_x_graph(comp_coords, comp_edges)
     gt_ims, coords, coord_cols, edges = get_gt_graph(
-        "/home/draga/PhD/data/cell_tracking_challenge/Fluo-N2DL-HeLa/", "01"
+        "/home/draga/PhD/software/ctc_evaluation/testing_dataset/", "03"
     )
     gt_g = make_network_x_graph(coords, edges)
     det_matrices = get_detection_matrices(gt_g, gt_ims, comp_g, comp_ims)
