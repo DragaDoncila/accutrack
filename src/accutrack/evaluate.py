@@ -315,7 +315,7 @@ def assign_edge_errors(gt_graph, comp_graph, node_mapping):
             gt_graph.edges[edge]["is_fn"] = True
 
 
-def get_error_counts(gt_graph, comp_graph):
+def get_edge_error_counts(gt_graph, comp_graph):
     count_fp = 0
     count_wrong_sem = 0
     count_tp = 0

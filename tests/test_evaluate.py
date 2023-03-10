@@ -4,6 +4,7 @@ from accutrack.evaluate import (
     assign_edge_errors,
     detection_test,
     get_comp_subgraph,
+    get_edge_error_counts,
     get_node_matching_map,
     get_vertex_errors,
 )
@@ -201,3 +202,34 @@ def test_assign_edge_errors_semantics():
 
     assert comp_g.edges[(3, 4)]["is_wrong_semantic"]
     assert not comp_g.edges[(3, 4)]["is_tp"]
+
+
+def test_count_edge_errors():
+    comp_ids = [3, 7, 10]
+    comp_ids_2 = list(np.asarray(comp_ids) + 1)
+    comp_ids += comp_ids_2
+
+    gt_ids = [4, 12, 17]
+    gt_ids_2 = list(np.asarray(gt_ids) + 1)
+    gt_ids += gt_ids_2
+    mapping = [(4, 3), (12, 7), (17, 10), (5, 4), (18, 11), (13, 8)]
+
+    # need a tp, fp, fn
+    comp_edges = [(3, 4), (7, 8)]
+    comp_g = nx.DiGraph()
+    comp_g.add_nodes_from(comp_ids)
+    comp_g.add_edges_from(comp_edges)
+    nx.set_node_attributes(comp_g, True, "is_tp")
+    nx.set_edge_attributes(comp_g, 0, "is_parent")
+
+    gt_edges = [(4, 5), (17, 18)]
+    gt_g = nx.DiGraph()
+    gt_g.add_nodes_from(gt_ids)
+    gt_g.add_edges_from(gt_edges)
+    nx.set_edge_attributes(gt_g, 0, "is_parent")
+    assign_edge_errors(gt_g, comp_g, mapping)
+    edge_errors = get_edge_error_counts(gt_g, comp_g)
+    assert edge_errors["tp"] == 1
+    assert edge_errors["fp"] == 1
+    assert edge_errors["fn"] == 1
+    assert edge_errors["ws"] == 0
