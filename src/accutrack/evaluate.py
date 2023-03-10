@@ -338,6 +338,82 @@ def get_edge_error_counts(gt_graph, comp_graph):
     return edge_errors
 
 
+def get_weighted_vertex_error_sum(
+    vertex_error_counts, vertex_ns_weight=1, vertex_fp_weight=1, vertex_fn_weight=1
+):
+    vertex_ns_count = vertex_error_counts["ns"]
+    vertex_fp_count = vertex_error_counts["fp"]
+    vertex_fn_count = vertex_error_counts["fn"]
+    vertex_error_sum = (
+        vertex_ns_weight * vertex_ns_count
+        + vertex_fp_weight * vertex_fp_count
+        + vertex_fn_weight * vertex_fn_count
+    )
+    return vertex_error_sum
+
+
+def get_weighted_edge_error_sum(
+    edge_error_counts, edge_fp_weight=1, edge_fn_weight=1, edge_ws_weight=1
+):
+    edge_fp_count = edge_error_counts["fp"]
+    edge_fn_count = edge_error_counts["fn"]
+    edge_ws_count = edge_error_counts["ws"]
+    edge_error_sum = (
+        edge_fp_weight * edge_fp_count
+        + edge_fn_weight * edge_fn_count
+        + edge_ws_weight * edge_ws_count
+    )
+    return edge_error_sum
+
+
+def get_weighted_error_sum(
+    vertex_error_counts,
+    edge_error_counts,
+    vertex_ns_weight=1,
+    vertex_fp_weight=1,
+    vertex_fn_weight=1,
+    edge_fp_weight=1,
+    edge_fn_weight=1,
+    edge_ws_weight=1,
+):
+    vertex_error_sum = get_weighted_vertex_error_sum(
+        vertex_error_counts, vertex_ns_weight, vertex_fp_weight, vertex_fn_weight
+    )
+    edge_error_sum = get_weighted_edge_error_sum(
+        edge_error_counts, edge_fp_weight, edge_fn_weight, edge_ws_weight
+    )
+    return vertex_error_sum + edge_error_sum
+
+
+def get_ctc_tra_error(gt_graph, vertex_error_counts, edge_error_counts):
+    vertex_weight_ns = 5
+    vertex_weight_fn = 10
+    vertex_weight_fp = 1
+
+    edge_weight_fp = 1
+    edge_weight_fn = 1.5
+    edge_weight_ws = 1
+
+    # AOGM-0 is the cost of creating the gt graph from scratch
+    n_nodes = gt_graph.number_of_nodes()
+    n_edges = gt_graph.number_of_edges()
+    aogm_0 = n_nodes * vertex_weight_fn + n_edges * edge_weight_fn
+
+    # AOGM is our weighted sum of all errors
+    aogm = get_weighted_error_sum(
+        vertex_error_counts,
+        edge_error_counts,
+        vertex_weight_ns,
+        vertex_weight_fp,
+        vertex_weight_fn,
+        edge_weight_fp,
+        edge_weight_fn,
+        edge_weight_ws,
+    )
+    tra = 1 - min(aogm, aogm_0) / aogm_0
+    return tra
+
+
 if __name__ == "__main__":
     comp_ims, comp_coords, comp_coord_cols, comp_edges = get_comp_graph(
         "/home/draga/PhD/data/cell_tracking_challenge/Fluo-N2DL-HeLa/", "01"
@@ -351,5 +427,7 @@ if __name__ == "__main__":
     mapping = get_node_matching_map(det_matrices)
     vertex_errors = get_vertex_errors(gt_g, comp_g, det_matrices)
     assign_edge_errors(gt_g, comp_g, mapping)
-    edge_errors = get_error_counts(gt_g, comp_g)
+    edge_errors = get_edge_error_counts(gt_g, comp_g)
+    tra_measure = get_ctc_tra_error(gt_g, vertex_errors, edge_errors)
+    print(tra_measure)
     print("Done!")
