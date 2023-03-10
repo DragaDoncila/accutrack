@@ -1,6 +1,7 @@
 import numpy as np
 import networkx as nx
 from accutrack.evaluate import (
+    assign_edge_errors,
     detection_test,
     get_comp_subgraph,
     get_node_matching_map,
@@ -142,4 +143,61 @@ def test_get_comp_subgraph():
     assert list(induced_graph.edges) == [(7, 11)]
 
 
-# test_get_comp_subgraph()
+def test_assign_edge_errors():
+    comp_ids = [3, 7, 10]
+    comp_ids_2 = list(np.asarray(comp_ids) + 1)
+    comp_ids += comp_ids_2
+
+    gt_ids = [4, 12, 17]
+    gt_ids_2 = list(np.asarray(gt_ids) + 1)
+    gt_ids += gt_ids_2
+    mapping = [(4, 3), (12, 7), (17, 10), (5, 4), (18, 11), (13, 8)]
+
+    # need a tp, fp, fn
+    comp_edges = [(3, 4), (7, 8)]
+    comp_g = nx.DiGraph()
+    comp_g.add_nodes_from(comp_ids)
+    comp_g.add_edges_from(comp_edges)
+    nx.set_node_attributes(comp_g, True, "is_tp")
+    nx.set_edge_attributes(comp_g, 0, "is_parent")
+
+    gt_edges = [(4, 5), (17, 18)]
+    gt_g = nx.DiGraph()
+    gt_g.add_nodes_from(gt_ids)
+    gt_g.add_edges_from(gt_edges)
+    nx.set_edge_attributes(gt_g, 0, "is_parent")
+    assign_edge_errors(gt_g, comp_g, mapping)
+
+    assert comp_g.edges[(3, 4)]["is_tp"]
+    assert comp_g.edges[(7, 8)]["is_fp"]
+    assert gt_g.edges[(17, 18)]["is_fn"]
+
+
+def test_assign_edge_errors_semantics():
+    comp_ids = [3, 7, 10]
+    comp_ids_2 = list(np.asarray(comp_ids) + 1)
+    comp_ids += comp_ids_2
+
+    gt_ids = [4, 12, 17]
+    gt_ids_2 = list(np.asarray(gt_ids) + 1)
+    gt_ids += gt_ids_2
+    mapping = [(4, 3), (12, 7), (17, 10), (5, 4), (18, 11), (13, 8)]
+
+    # need a tp, fp, fn
+    comp_edges = [(3, 4)]
+    comp_g = nx.DiGraph()
+    comp_g.add_nodes_from(comp_ids)
+    comp_g.add_edges_from(comp_edges)
+    nx.set_node_attributes(comp_g, True, "is_tp")
+    nx.set_edge_attributes(comp_g, 0, "is_parent")
+
+    gt_edges = [(4, 5), (17, 18)]
+    gt_g = nx.DiGraph()
+    gt_g.add_nodes_from(gt_ids)
+    gt_g.add_edges_from(gt_edges)
+    nx.set_edge_attributes(gt_g, 0, "is_parent")
+    gt_g.edges[(4, 5)]["is_parent"] = 1
+    assign_edge_errors(gt_g, comp_g, mapping)
+
+    assert comp_g.edges[(3, 4)]["is_wrong_semantic"]
+    assert not comp_g.edges[(3, 4)]["is_tp"]
